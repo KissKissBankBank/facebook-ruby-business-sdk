@@ -182,6 +182,31 @@ module FacebookAds
         params
       end
 
+      def execute_with_session(session)
+        unless valid?
+          raise list_invalid_properties
+        end
+
+        if http_service_client
+          return execute_with_client(http_service_client)
+        end
+
+        params = get_params
+        params[:data] = normalize
+        ads_pixel = FacebookAds::AdsPixel.get(pixel_id, session)
+        response = ads_pixel.events.create(params)
+        json_response_object = JSON.parse(
+          JSON.generate(response),
+          object_class: OpenStruct,
+        )
+
+        FacebookAds::ServerSide::EventResponse.new(
+          events_received: json_response_object.events_received,
+          messages: json_response_object.messages,
+          fbtrace_id: json_response_object.fbtrace_id,
+        )
+      end
+
       def execute_with_client http_client
         url = [
           "https://#{FacebookAds::DEFAULT_HOST}",
